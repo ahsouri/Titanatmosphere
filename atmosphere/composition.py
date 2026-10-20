@@ -107,11 +107,11 @@ def integrate_Niemann(layers, nlev=10, verbose=False):
         n = density_at_pressure(levels)
         for j in range(nlev):
             m_CH4[j] = CH4_Niemann(z[j])
-        N_CH4[i] = np.trapz(n*m_CH4, -z*1e5)/amg/1e5
+        N_CH4[i] = np.trapezoid(n*m_CH4, -z*1e5)/amg/1e5
         line = "{:>2d}"+"{:^12.2e}"*7
         if verbose:
             print(line.format(i, N_CH4[i], min(m_CH4), max(m_CH4), 
-                          min(n), max(n), np.trapz(n, -z*1e5), max(z)- min(z)))
+                          min(n), max(n), np.trapezoid(n, -z*1e5), max(z)- min(z)))
     return N_CH4
 
 def structure_table_with_composition(layers, latex_file=None):

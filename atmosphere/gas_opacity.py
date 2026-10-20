@@ -86,8 +86,8 @@ def set_methane(model, kc_file, CH3D_scale=None, verbose=False):
         if len(kc_file) != 2:
             logger.debug('two k-coefficient files needed for set_methane_opacity()')
             return None
-        kc = np.load(kc_file[0]).item()
-        kc_CH3D = np.load(kc_file[1]).item()
+        kc = np.load(kc_file[0],allow_pickle=True).item()
+        kc_CH3D = np.load(kc_file[1],allow_pickle=True).item()
         kc['kc'] = kc['kc']+CH3D_scale*kc_CH3D['kc']
 
         model.update({'wavelength':kc['wavelength']['mu'], 
@@ -101,7 +101,7 @@ def set_methane(model, kc_file, CH3D_scale=None, verbose=False):
         return
 
     if kc_file.endswith('.npy'): 
-        kc = np.load(kc_file).item()
+        kc = np.load(kc_file,allow_pickle=True).item()
         model.update({'wavelength':kc['wavelength']['mu'], 
                     'nlam':kc['wavelength']['nlam'], })                     
         append_kc_to_layers(model, kc, 'CH4')
@@ -113,8 +113,11 @@ def set_methane(model, kc_file, CH3D_scale=None, verbose=False):
         return
 
     if kc_file.endswith('.fits'):   
-        import pyfits
-        hdu = pyfits.open(kc_file)
+
+        from astropy.io import fits
+        if kc_file.endswith('.fits'):
+           hdu = fits.open(kc_file)
+
 
         kc = {'kc': hdu[0].data,
               'pressures':hdu[2].data['pressures'],
@@ -154,18 +157,18 @@ def set_cia(model, scale=4.0, show_figure=False):
     N2-N2 and H2-N2 (in the near-IR) to the atmosphere 
     data structure, model."""
 
-    import pyfits
+    from astropy.io import fits
     import os
 
-    fits = pyfits.open(os.path.join(os.getenv('RTDATAPATH'), 
+    hdu = fits.open(os.path.join(os.getenv('RTDATAPATH'), 
                                     'gas_opacity/CIA/N2_N2.fits'))
-    k_N2N2 = fits[0].data
-    fits.close()
+    k_N2N2 = hdu[0].data
+    hdu.close()
 
-    fits = pyfits.open(os.path.join(os.getenv('RTDATAPATH'), 
+    hdu = fits.open(os.path.join(os.getenv('RTDATAPATH'), 
                                     'gas_opacity/CIA/H2_N2.fits'))
-    k_H2N2 = fits[0].data
-    fits.close()
+    k_H2N2 = hdu[0].data
+    hdu.close()
 
     if 'wavelength' not in model.keys():
         logger.warning('Set wavelength scale first (e.g., with CH4 opacity.)')

@@ -1,12 +1,12 @@
 import numpy as np
 import os
 from time import time
-
+import matplotlib.pyplot as plt
 import sys
 required_version = (3,3)
 current_version = sys.version_info
 
-os.environ['RTDATAPATH'] = '/Users/mate/g/rt/data/refdata/'
+os.environ['RTDATAPATH'] = '/mnt/c/Linux/PROJECTS/TIRAN/Titanatmosphere/refdata/'
 
 import atmosphere as atm
 from atmosphere.rt import pydisort
@@ -27,13 +27,96 @@ def create_atmosphere_model(**kw):
     
     ts = time()
     titan = atm.structure.set_HASI_structure(nlev=21,method='split_at_tropopause')
+
+    print("Levels:", titan["nlev"])
+    print("Layers:", titan["nlay"])
+    print(titan["layers"].keys())
+
+  
     atm.composition.set_abundances(titan, trace_gas={'m_H2':0.001})
+
+
+    layers = titan["layers"]
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+
+    axs[0].plot(layers["T"], layers["z"], "o-")
+    axs[0].set_xlabel("Temperature (K)")
+    axs[0].set_ylabel("Altitude (km)")
+    axs[0].grid(True)
+
+    axs[1].semilogx(layers["p"], layers["z"], "o-")
+    axs[1].set_xlabel("Pressure (mbar)")
+    axs[1].set_ylabel("Altitude (km)")
+    axs[1].grid(True)
+
+    #plt.tight_layout()
+    #plt.show()
+
+    #plt.figure(figsize=(5, 6))
+    #plt.plot(
+    #100 * layers["m_CH4"],
+    #layers["z"],
+    #"o-"
+    #)
+
+    #plt.xlabel("CH4 mole fraction (%)")
+    #plt.ylabel("Altitude (km)")
+    #plt.grid(True)
+    #plt.show()
+
+ 
     atm.gas_opacity.set_methane(titan, 
-                                kc_file=os.path.join(os.environ['RTDATAPATH'],
-                                                     'gas_opacity/kc_CH4.VIMS.v08.fits'),
+                                kc_file=[
+                                  os.path.join(os.environ['RTDATAPATH'],'gas_opacity/k-coefficients/kc_12CH4.VIMS_2004.v01.npy'),
+                                  os.path.join(os.environ['RTDATAPATH'],'gas_opacity/k-coefficients/kc_12CH3D.VIMS_2004.v01.npy')
+                                ],
+                                CH3D_scale=5.28e-4
                                 )
+    
     atm.gas_opacity.set_cia(titan)
+
+    lam = titan["wavelength"]  # micrometers 
+    tau_ch4 = titan["layers"]["tau"]["CH4"]
+    weights = titan["layers"]["kc"]["w"]
+
+    # Layer-integrated optical depths at each g-node
+    tau_column = np.sum(tau_ch4, axis=0)
+
+    # Weighted optical-depth diagnostic
+    tau_weighted = np.sum(
+      tau_column * weights[None, :],
+      axis=1
+    )
+
+    plt.figure(figsize=(10, 4))
+    plt.semilogy(lam, np.maximum(tau_weighted, 1e-12))
+    plt.xlabel("Wavelength (µm)")
+    plt.ylabel("Weighted CH4 optical depth")
+    plt.show()
+ 
     atm.aerosol.set_opacity(titan)
+
+
+    lam = titan["wavelength"]
+    haze_tau = titan["haze"]["tau"]
+
+    plt.figure(figsize=(9, 4))
+
+    for region in ["low", "mid", "high", "total"]:
+       plt.plot(
+        lam,
+        haze_tau[region],
+        label=region
+       )
+
+    #plt.yscale("log")
+    #plt.xlabel("Wavelength (µm)")
+    #plt.ylabel("Haze vertical optical depth")
+    #plt.legend()
+    #plt.grid(True)
+    #plt.show()
+    
     DISR = atm.aerosol.fit_DISR_phases()
     atm.aerosol.set_aerosol_phase_moments(titan, DISR, nmom=32)   
     t_setup = time()-ts
@@ -81,5 +164,14 @@ if __name__ == '__main__':
         print("PyDISORT Calculation for {:d} channels complete: {:4.1f} sec [success]".format(
             titan['rt']['nlam'],
             time()-ts),)
+
+        n_channels = min(30, titan["nlam"])
+        lam = titan["wavelength"][:n_channels]
+        radiance = titan["spectrum"][:n_channels]
+
+        plt.plot(lam, radiance)
+        plt.xlabel("Wavelength (µm)")
+        plt.ylabel("DISORT modeled intensity")
+        plt.show()
     else:
         print('PyDISORT Currently requires Python 3.3 or newer.')

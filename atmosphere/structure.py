@@ -119,8 +119,8 @@ def set_HASI_structure(nlev=25, method='split_at_tropopause'):
     def split_at_tropopause(): 
         tropopause = 300 # [mbar]
         levels = np.unique(np.append(
-                    np.linspace(min(HASI['p']), tropopause, (nlev/2)+1),
-                    np.linspace(tropopause, max(HASI['p']), (nlev/2)+1) ))
+                    np.linspace(min(HASI['p']), tropopause, int(nlev/2)+1),
+                    np.linspace(tropopause, max(HASI['p']), int(nlev/2)+1) ))
         return levels
                 
     def equal_columns():
@@ -176,7 +176,7 @@ def set_HASI_structure(nlev=25, method='split_at_tropopause'):
         sub_levels = np.linspace(p_min, p_max, n_sub_levels)
         z = altitude_at_pressure(sub_levels)        
         n = density_at_pressure(sub_levels)
-        layers['N_int'][i] = np.trapz(n, -z*1e5)
+        layers['N_int'][i] = np.trapezoid(n, -z*1e5)
 
         layers['kmamg'][i] = layers['N_int'][i]/amg/1e5
                 

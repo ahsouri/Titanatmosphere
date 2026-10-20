@@ -33,7 +33,7 @@ def mono(mono_input):
     ds.radius  = float(mono_input['radius'])
     ds.bc.umu0 = float(mono_input['umu0'])
     ds.bc.phi0 = float(mono_input['phi0'])
-    ds.nstr   = int(mono_input['nstr'])
+    ds.nstr   = 8
     ds.nphase = ds.nstr
     ds.nlyr   = int(mono_input['nlyr'])
     ds.nmom   = int(mono_input['nmom'])
